@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -41,7 +42,7 @@
     <div class="w-full max-w-2xl text-center bg-white/60 backdrop-blur-sm shadow-2xl rounded-2xl p-8 border-4 border-amber-800/50">
         <header>
             <h1 class="font-treasure text-5xl md:text-6xl text-amber-900 mb-4">Caça ao Tesouro</h1>
-            <p class="text-gray-700 text-lg mb-8">Clique na primeira pista para começar. Para as próximas pistas, encontre os envelopes vermelhos e faça a leitura do QR Code. Você começa com 40 minutos de massagem/coçada e, a cada pista aberta, perde 10 minutos. Boa sorte!</p>
+            <p class="text-gray-700 text-lg mb-8">Clique na primeira pista para começar. Para as pistas seguintes, encontre o QR code físico e use o botão correspondente para o ler!</p>
         </header>
 
         <div class="grid grid-cols-2 gap-4">
@@ -86,33 +87,36 @@
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 
     <script>
+        // --- CONFIGURAÇÃO DA NOTIFICAÇÃO POR EMAIL ---
+        // IMPORTANTE: Substitua a linha abaixo pelo URL que você obteve do IFTTT.
+        // Veja o ficheiro 'instrucoes_email.md' para saber como.
+        const NOTIFICATION_WEBHOOK_URL = 'https://maker.ifttt.com/trigger/pista_aberta/with/key/opmFFbjq1xcL4Lzuu5zuov0VSQhnGMW6BxvhX51QQVH'; 
+
         // --- DADOS DAS PISTAS ---
-        // INSTRUÇÃO: Adicione o caminho para a sua imagem de dica na propriedade 'hintImage'.
-        // Exemplo: 'images/dica1.jpg'
         const clues = {
             '1': {
                 title: 'Pista 1: O Início',
                 description: 'A jornada começa junto aos aparelhos de ginástica. Talvez o melhor a fazer, quando chegar lá, seja sentar no banco e procurar pela próxima pista.',
                 mapEmbedCode: '<iframe src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d201.9084963956884!2d-8.56882526414805!3d41.20256462226302!2m3!1f0!2f0!3f0!3m2!1i1024!i768!4f13.1!5e1!3m2!1spt-PT!2spt!4v1759921511343!5m2!1spt-PT!2spt" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>',
-                hintImage: 'images/Pista 1.jpeg '
+                hintImage: 'images/dica-pista1.jpg'
             },
             '2': {
                 title: 'Pista 2: A Descoberta',
                 description: 'Voltando para casa, há uma pracinha em formato de triângulo, muito bonitinha. Verifique se na primeira árvore há alguma coisa para você.',
                 mapEmbedCode: null,
-                hintImage: 'images/Pista 2.jpeg ' // Caminho para a imagem da dica 2
+                hintImage: 'images/dica-pista2.jpg'
             },
             '3': {
                 title: 'Pista 3: O Penúltimo Desafio',
                 description: 'Muito bem. Quando chegar nesse lugar verifique nos banquinhos, apesar de quebrados, um deles pode guardar uma ultima pista.',
                 mapEmbedCode: null,
-                hintImage: 'images/dica-pista3.jpg' // Caminho para a imagem da dica 3
+                hintImage: 'images/dica-pista3.jpg'
             },
             '4': {
                 title: 'Pista Final: O Tesouro!',
                 description: 'Parabéns! Você chegou ao fim. Você tem um jantar marcado para hoje a noite. Agora vai para casa e pegue seu presente dentro do guarda roupas.',
                 mapEmbedCode: null,
-                hintImage: null // Sem dica para a pista final
+                hintImage: null
             }
         };
 
@@ -134,6 +138,29 @@
         let currentScanningClue = null;
         let animationFrameId = null;
         let currentClueData = null;
+
+        // --- FUNÇÕES DO JOGO ---
+
+        // Função para enviar a notificação por email via IFTTT
+        function sendEmailNotification(clueTitle) {
+            if (!NOTIFICATION_WEBHOOK_URL) {
+                console.log("URL de notificação não configurado. Email não enviado.");
+                return;
+            }
+
+            // O IFTTT espera um payload JSON com 'value1', 'value2', etc.
+            const data = {
+                value1: clueTitle
+            };
+
+            fetch(NOTIFICATION_WEBHOOK_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(response => console.log("Sinal de notificação enviado com sucesso."))
+            .catch(error => console.error("Erro ao tentar enviar notificação:", error));
+        }
 
         function showModal(modalElement) {
             modalElement.classList.remove('opacity-0', 'pointer-events-none');
@@ -158,6 +185,8 @@
                 showHintBtn.classList.add('hidden');
             }
             showModal(mapModal);
+            // Envia a notificação por email assim que o mapa é aberto
+            sendEmailNotification(clueData.title);
         }
 
         function stopScanner() {
@@ -183,7 +212,7 @@
                     stopScanner();
                     const clueData = clues[currentScanningClue];
                     clueData.mapEmbedCode = code.data;
-                    openMapModal(clueData);
+                    openMapModal(clueData); // A notificação será enviada dentro desta função
                 }
             }
             if (video.srcObject) {
@@ -208,6 +237,7 @@
                 });
         }
         
+        // --- EVENT LISTENERS ---
         clueButtons.forEach(button => {
             button.addEventListener('click', () => {
                 const clueId = button.dataset.clue;
@@ -232,10 +262,5 @@
     </script>
 </body>
 </html>
-
-
-
-
-
 
 
