@@ -32,7 +32,6 @@
             width: 100%;
             max-width: 500px;
             border-radius: 0.5rem;
-            /* A propriedade transform foi removida para corrigir o efeito de espelho. */
         }
     </style>
 </head>
@@ -60,6 +59,7 @@
             <h2 id="mapModalTitle" class="font-treasure text-3xl text-amber-900 mb-4"></h2>
             <div id="mapContainer" class="border-4 border-amber-800/50 rounded-md overflow-hidden mb-4 w-full aspect-video bg-gray-200"></div>
             <p id="mapModalDescription" class="text-gray-800 text-lg"></p>
+            <button id="showHintBtn" class="hidden mt-4 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition self-center">Abrir Dica</button>
         </div>
     </div>
 
@@ -70,35 +70,49 @@
             <h2 class="font-treasure text-3xl text-amber-900 mb-4">Ler QR Code</h2>
             <p id="scannerMessage" class="text-gray-700 mb-4">Aponte a câmera para o QR code da pista.</p>
             <video id="scannerVideo" playsinline></video>
-            <!-- O canvas é usado pelo script para processar a imagem, não precisa ser visível -->
             <canvas id="scannerCanvas" class="hidden"></canvas>
         </div>
     </div>
+
+    <!-- Modal para a DICA (IMAGEM) -->
+    <div id="hintModal" class="modal fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-50 opacity-0 pointer-events-none">
+        <div class="bg-amber-100 rounded-lg shadow-xl p-6 w-full max-w-2xl text-center relative transform scale-95 transition-transform duration-300">
+            <button id="closeHintModal" class="absolute top-3 right-3 text-gray-600 hover:text-gray-900 text-3xl z-10">&times;</button>
+            <h2 class="font-treasure text-3xl text-amber-900 mb-4">Dica Visual</h2>
+            <img id="hintImage" src="" alt="Dica em imagem para a pista" class="max-w-full max-h-[70vh] mx-auto rounded-md border-4 border-amber-800/50">
+        </div>
+    </div>
     
-    <!-- Biblioteca para ler QR Codes -->
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 
     <script>
+        // --- DADOS DAS PISTAS ---
+        // INSTRUÇÃO: Adicione o caminho para a sua imagem de dica na propriedade 'hintImage'.
+        // Exemplo: 'images/dica1.jpg'
         const clues = {
             '1': {
                 title: 'Pista 1: O Início',
                 description: 'A jornada começa junto aos aparelhos de ginástica. Talvez o melhor a fazer, quando chegar lá, seja sentar no banco e procurar pela próxima pista.',
                 mapEmbedCode: '<iframe src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d201.9084963956884!2d-8.56882526414805!3d41.20256462226302!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e1!3m2!1spt-PT!2spt!4v1759921511343!5m2!1spt-PT!2spt" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>',
+                hintImage: null // Sem dica para a primeira pista, por exemplo
             },
             '2': {
                 title: 'Pista 2: A Descoberta',
                 description: 'Voltando para casa, há uma pracinha em formato de triângulo, muito bonitinha. Verifique se na primeira árvore há alguma coisa para você.',
-                mapEmbedCode: null, // Será preenchido pelo QR code
+                mapEmbedCode: null,
+                hintImage: 'images/dica-pista2.jpg' // Caminho para a imagem da dica 2
             },
             '3': {
                 title: 'Pista 3: O Penúltimo Desafio',
-                description: 'Muito bem. Quando chegar nesse lugar verifique nos banquinhos, apesar de quebrados, um deles porde gradar uma ultima pista.',
-                mapEmbedCode: null, // Será preenchido pelo QR code
+                description: 'Muito bem. Quando chegar nesse lugar verifique nos banquinhos, apesar de quebrados, um deles pode guardar uma ultima pista.',
+                mapEmbedCode: null,
+                hintImage: 'images/dica-pista3.jpg' // Caminho para a imagem da dica 3
             },
             '4': {
                 title: 'Pista Final: O Tesouro!',
                 description: 'Parabéns! Você chegou ao fim. Você tem um jantar marcado para hoje a noite. Agora vai para casa e pegue seu presente dentro do guarda roupas.',
-                mapEmbedCode: null, // Será preenchido pelo QR code
+                mapEmbedCode: null,
+                hintImage: null // Sem dica para a pista final
             }
         };
 
@@ -106,42 +120,49 @@
         const clueButtons = document.querySelectorAll('.clue-btn');
         const mapModal = document.getElementById('mapModal');
         const scannerModal = document.getElementById('scannerModal');
+        const hintModal = document.getElementById('hintModal');
         const closeMapModalBtn = document.getElementById('closeMapModal');
         const closeScannerModalBtn = document.getElementById('closeScannerModal');
+        const closeHintModalBtn = document.getElementById('closeHintModal');
         const video = document.getElementById('scannerVideo');
         const canvasElement = document.getElementById('scannerCanvas');
         const canvas = canvasElement.getContext('2d');
         const scannerMessage = document.getElementById('scannerMessage');
+        const showHintBtn = document.getElementById('showHintBtn');
+        const hintImage = document.getElementById('hintImage');
+        
         let currentScanningClue = null;
         let animationFrameId = null;
+        let currentClueData = null;
 
-        // Função para mostrar um modal
         function showModal(modalElement) {
             modalElement.classList.remove('opacity-0', 'pointer-events-none');
             modalElement.querySelector(':scope > div').classList.remove('scale-95');
         }
 
-        // Função para esconder um modal
         function hideModal(modalElement) {
             modalElement.classList.add('opacity-0');
             modalElement.querySelector(':scope > div').classList.add('scale-95');
             setTimeout(() => modalElement.classList.add('pointer-events-none'), 300);
         }
 
-        // Abrir o modal do mapa com os dados
         function openMapModal(clueData) {
+            currentClueData = clueData;
             document.getElementById('mapModalTitle').textContent = clueData.title;
             document.getElementById('mapContainer').innerHTML = clueData.mapEmbedCode;
             document.getElementById('mapModalDescription').textContent = clueData.description;
+            
+            if (clueData.hintImage) {
+                showHintBtn.classList.remove('hidden');
+            } else {
+                showHintBtn.classList.add('hidden');
+            }
             showModal(mapModal);
         }
 
-        // Parar o leitor de QR code e a câmera
         function stopScanner() {
-            if (animationFrameId) {
-                cancelAnimationFrame(animationFrameId);
-                animationFrameId = null;
-            }
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
             if (video.srcObject) {
                 video.srcObject.getTracks().forEach(track => track.stop());
                 video.srcObject = null;
@@ -149,7 +170,6 @@
             hideModal(scannerModal);
         }
 
-        // Loop de verificação do QR code
         function tick() {
             if (video.readyState === video.HAVE_ENOUGH_DATA) {
                 scannerMessage.textContent = "Aponte a câmera para o QR code...";
@@ -157,43 +177,37 @@
                 canvasElement.width = video.videoWidth;
                 canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
                 const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
-                const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                    inversionAttempts: "dontInvert",
-                });
+                const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
 
                 if (code) {
-                    // QR Code encontrado!
                     stopScanner();
                     const clueData = clues[currentScanningClue];
-                    clueData.mapEmbedCode = code.data; // Atualiza o código do mapa
+                    clueData.mapEmbedCode = code.data;
                     openMapModal(clueData);
                 }
             }
-            if (video.srcObject) { // Continua se a câmera ainda estiver ativa
+            if (video.srcObject) {
                 animationFrameId = requestAnimationFrame(tick);
             }
         }
 
-        // Iniciar o leitor de QR code
         function startScanner(clueId) {
             currentScanningClue = clueId;
             scannerMessage.textContent = "A pedir permissão para a câmera...";
             showModal(scannerModal);
 
             navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-                .then(function(stream) {
+                .then(stream => {
                     video.srcObject = stream;
-                    video.setAttribute("playsinline", true); // Necessário para iOS
                     video.play();
                     animationFrameId = requestAnimationFrame(tick);
                 })
-                .catch(function(err) {
+                .catch(err => {
                     console.error("Erro ao aceder à câmera: ", err);
                     scannerMessage.textContent = "Não foi possível aceder à câmera. Verifique as permissões.";
                 });
         }
         
-        // Event Listeners
         clueButtons.forEach(button => {
             button.addEventListener('click', () => {
                 const clueId = button.dataset.clue;
@@ -205,8 +219,19 @@
             });
         });
 
+        showHintBtn.addEventListener('click', () => {
+            if (currentClueData && currentClueData.hintImage) {
+                hintImage.src = currentClueData.hintImage;
+                showModal(hintModal);
+            }
+        });
+
         closeMapModalBtn.addEventListener('click', () => hideModal(mapModal));
         closeScannerModalBtn.addEventListener('click', stopScanner);
+        closeHintModalBtn.addEventListener('click', () => hideModal(hintModal));
     </script>
 </body>
 </html>
+
+
+
