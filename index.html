@@ -91,7 +91,6 @@
     <script>
         // --- CONFIGURAÇÃO DA NOTIFICAÇÃO POR EMAIL (EmailJS) ---
         // IMPORTANTE: Substitua os valores abaixo pelos que você obteve do EmailJS.
-        // Veja o ficheiro 'instrucoes_email.md' para saber como.
         const EMAILJS_SERVICE_ID = 'service_zvfv3dw';
         const EMAILJS_TEMPLATE_ID = 'template_ji63nmq';
         const EMAILJS_PUBLIC_KEY = 'LCe8eu4cdhM707tYD';
@@ -111,7 +110,7 @@
                 hintImage: 'images/Dica 2.jpeg'
             },
             '3': {
-                title: 'Pista 3: Que baquinho Legal',
+                title: 'Pista 3: Que banquinho Legal',
                 description: 'Muito bem. Quando chegar nesse lugar verifique os banquinhos, um deles pode guardar uma ultima pista.',
                 mapEmbedCode: null,
                 hintImage: 'images/Dica 3.jpeg'
@@ -145,17 +144,12 @@
 
         // --- FUNÇÕES DO JOGO ---
 
-        // Função para enviar a notificação por email via EmailJS
         function sendEmailNotification(clueTitle) {
             if (EMAILJS_SERVICE_ID === 'SEU_SERVICE_ID' || !EMAILJS_SERVICE_ID) {
                 console.log("EmailJS não configurado. Email não enviado.");
                 return;
             }
-
-            const templateParams = {
-                pista_titulo: clueTitle
-            };
-
+            const templateParams = { pista_titulo: `DICA DA PISTA: ${clueTitle}` };
             emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams, EMAILJS_PUBLIC_KEY)
                 .then(function(response) {
                    console.log('Notificação enviada com sucesso!', response.status, response.text);
@@ -187,8 +181,6 @@
                 showHintBtn.classList.add('hidden');
             }
             showModal(mapModal);
-            // Envia a notificação por email assim que o mapa é aberto
-            sendEmailNotification(clueData.title);
         }
 
         function stopScanner() {
@@ -214,7 +206,7 @@
                     stopScanner();
                     const clueData = clues[currentScanningClue];
                     clueData.mapEmbedCode = code.data;
-                    openMapModal(clueData); // A notificação será enviada dentro desta função
+                    openMapModal(clueData);
                 }
             }
             if (video.srcObject) {
@@ -255,6 +247,8 @@
             if (currentClueData && currentClueData.hintImage) {
                 hintImage.src = currentClueData.hintImage;
                 showModal(hintModal);
+                // Envia a notificação por email assim que a DICA é aberta
+                sendEmailNotification(currentClueData.title);
             }
         });
 
@@ -264,4 +258,3 @@
     </script>
 </body>
 </html>
-
