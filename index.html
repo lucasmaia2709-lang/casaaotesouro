@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -84,12 +83,18 @@
         </div>
     </div>
     
+    <!-- Biblioteca para ler QR Codes -->
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    <!-- Biblioteca para enviar Emails (EmailJS) -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
     <script>
-        // --- CONFIGURAÇÃO DA NOTIFICAÇÃO POR EMAIL ---
-        // O URL abaixo foi construído a partir da sua chave e do nome do evento "pista_aberta".
-        const NOTIFICATION_WEBHOOK_URL = 'https://maker.ifttt.com/trigger/pista_aberta/with/key/opmFFbjq1xcL4Lzuu5zuov0VSQhnGMW6BxvhX51QQVH'; 
+        // --- CONFIGURAÇÃO DA NOTIFICAÇÃO POR EMAIL (EmailJS) ---
+        // IMPORTANTE: Substitua os valores abaixo pelos que você obteve do EmailJS.
+        // Veja o ficheiro 'instrucoes_email.md' para saber como.
+        const EMAILJS_SERVICE_ID = 'service_zvfv3dw';
+        const EMAILJS_TEMPLATE_ID = 'template_ji63nmq';
+        const EMAILJS_PUBLIC_KEY = 'LCe8eu4cdhM707tYD';
 
         // --- DADOS DAS PISTAS ---
         const clues = {
@@ -101,19 +106,19 @@
             },
             '2': {
                 title: 'Pista 2: A Descoberta',
-                description: 'Voltando para casa, há uma pracinha em formato de triângulo, muito bonitinha. Verifique se na primeira árvore há alguma coisa para você.',
+                description: 'Voltando para casa, há uma pracinha em formato de triângulo. La tem duas arvores bem bonitas.',
                 mapEmbedCode: null,
                 hintImage: 'images/Dica 2.jpeg'
             },
             '3': {
                 title: 'Pista 3: O Penúltimo Desafio',
-                description: 'Muito bem. Quando chegar nesse lugar verifique nos banquinhos, apesar de quebrados, um deles pode guardar uma ultima pista.',
+                description: 'Muito bem. Quando chegar nesse lugar verifique os banquinhos, um deles pode guardar uma ultima pista.',
                 mapEmbedCode: null,
                 hintImage: 'images/Dica 3.jpeg'
             },
             '4': {
                 title: 'Pista Final: O Tesouro!',
-                description: 'Parabéns! Você chegou ao fim. Você tem um jantar marcado para hoje a noite. Agora vai para casa e pegue seu presente dentro do guarda roupas.',
+                description: 'Parabéns! Você chegou ao fim. Você tem um jantar marcado para hoje a noite. Agora vai para casa e pegue seu presente dentro do armario da cozinha.',
                 mapEmbedCode: null,
                 hintImage: null
             }
@@ -140,25 +145,23 @@
 
         // --- FUNÇÕES DO JOGO ---
 
-        // Função para enviar a notificação por email via IFTTT
+        // Função para enviar a notificação por email via EmailJS
         function sendEmailNotification(clueTitle) {
-            if (!NOTIFICATION_WEBHOOK_URL) {
-                console.log("URL de notificação não configurado. Email não enviado.");
+            if (EMAILJS_SERVICE_ID === 'SEU_SERVICE_ID' || !EMAILJS_SERVICE_ID) {
+                console.log("EmailJS não configurado. Email não enviado.");
                 return;
             }
 
-            // O IFTTT espera um payload JSON com 'value1', 'value2', etc.
-            const data = {
-                value1: clueTitle
+            const templateParams = {
+                pista_titulo: clueTitle
             };
 
-            fetch(NOTIFICATION_WEBHOOK_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            })
-            .then(response => console.log("Sinal de notificação enviado com sucesso."))
-            .catch(error => console.error("Erro ao tentar enviar notificação:", error));
+            emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams, EMAILJS_PUBLIC_KEY)
+                .then(function(response) {
+                   console.log('Notificação enviada com sucesso!', response.status, response.text);
+                }, function(error) {
+                   console.error('FALHA ao enviar notificação...', error);
+                });
         }
 
         function showModal(modalElement) {
@@ -261,4 +264,3 @@
     </script>
 </body>
 </html>
-
